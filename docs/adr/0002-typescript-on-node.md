@@ -4,7 +4,7 @@ Date: 2026-11-10
 
 ## Status
 
-Accepted
+Accepted. The Node floor is amended by [ADR 6](0006-node-22-or-later.md) (Node 22 or later).
 
 ## Context
 

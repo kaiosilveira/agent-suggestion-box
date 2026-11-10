@@ -20,7 +20,7 @@ skills, scripts, prompts and checks. It is not a channel for reporting bugs to a
 
 ## Install
 
-It needs Node 20 or later. Install it once and use it in every project:
+It needs Node 22 or later. Install it once and use it in every project:
 
 ```bash
 npm install -g agent-suggestion-box
