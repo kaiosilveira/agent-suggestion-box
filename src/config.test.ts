@@ -73,6 +73,13 @@ describe("loadConfig", () => {
     expect((await loadConfig(base)).file.path).toBe(join(base, "box.jsonl"));
   });
 
+  it("lets SUGGESTION_BOX_FILE override the configured path, resolved against the root", async () => {
+    await writeFile(join(base, ".suggestion-box.json"), JSON.stringify({ store: "file", file: { path: "box.jsonl" } }));
+    expect((await loadConfig(base, { SUGGESTION_BOX_FILE: "/elsewhere/box.jsonl" })).file.path).toBe("/elsewhere/box.jsonl");
+    expect((await loadConfig(base, { SUGGESTION_BOX_FILE: "other.jsonl" })).file.path).toBe(join(base, "other.jsonl"));
+    expect((await loadConfig(base, { SUGGESTION_BOX_FILE: "" })).file.path).toBe(join(base, "box.jsonl"));
+  });
+
   it("refuses an unknown store name", async () => {
     await writeFile(join(base, ".suggestion-box.json"), JSON.stringify({ store: "github" }));
     await expect(loadConfig(base)).rejects.toThrow(ConfigError);

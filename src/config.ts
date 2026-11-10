@@ -14,6 +14,9 @@ export const CONFIG_FILE = ".suggestion-box.json";
 /** Overrides the project root, after `--root`. */
 export const ROOT_ENV = "SUGGESTION_BOX_ROOT";
 
+/** Overrides the file store's path, over `.suggestion-box.json`: one config in the repo, a box wherever each machine keeps it. */
+export const FILE_ENV = "SUGGESTION_BOX_FILE";
+
 export class ConfigError extends Error {
   override readonly name = "ConfigError";
 }
@@ -59,7 +62,7 @@ export async function findRoot({ flag, env, cwd, stopAt }: FindRootOptions): Pro
   );
 }
 
-export async function loadConfig(root: string): Promise<Config> {
+export async function loadConfig(root: string, env: { [FILE_ENV]?: string | undefined } = {}): Promise<Config> {
   const path = join(root, CONFIG_FILE);
   let raw: unknown = {};
   try {
@@ -75,7 +78,7 @@ export async function loadConfig(root: string): Promise<Config> {
   return {
     root,
     store: parsed.data.store,
-    file: { path: resolve(root, parsed.data.file?.path ?? DEFAULT_PATH) },
+    file: { path: resolve(root, (env[FILE_ENV] || undefined) ?? parsed.data.file?.path ?? DEFAULT_PATH) },
   };
 }
 
