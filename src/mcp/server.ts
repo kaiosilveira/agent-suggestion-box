@@ -29,6 +29,7 @@ const WHAT_TO_POST =
 
 export function createServer({ store, now, version, defaultSource }: ServerOptions): McpServer {
   const server = new McpServer({ name: "agent-suggestion-box", version });
+  const run = serial();
 
   server.registerTool(
     "list_suggestions",
@@ -109,8 +110,21 @@ export async function startServer(options: ServerOptions): Promise<void> {
   await createServer(options).connect(new StdioServerTransport());
 }
 
+/**
+ * Runs tool calls one at a time. The SDK handles requests concurrently, and an agent can call tools in parallel, so
+ * without this two `suggest` calls could both check for a duplicate before either posts.
+ */
+function serial(): (body: () => Promise<string>) => Promise<CallToolResult> {
+  let last: Promise<unknown> = Promise.resolve();
+  return (body) => {
+    const result = last.then(() => toResult(body));
+    last = result.catch(() => undefined);
+    return result;
+  };
+}
+
 /** Turns a rule the agent broke into an error result it can read and act on; anything else is a real failure. */
-async function run(body: () => Promise<string>): Promise<CallToolResult> {
+async function toResult(body: () => Promise<string>): Promise<CallToolResult> {
   try {
     return { content: [{ type: "text", text: await body() }] };
   } catch (error) {

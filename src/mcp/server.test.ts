@@ -83,6 +83,12 @@ describe("MCP server", () => {
     expect(await store.listOpen()).toHaveLength(1);
   });
 
+  it("refuses a duplicate posted at the same time as the original", async () => {
+    const results = await Promise.all([call("suggest", ENTRY), call("suggest", ENTRY)]);
+    expect(results.map((r) => r.isError).sort()).toEqual([false, true]);
+    expect(await store.listOpen()).toHaveLength(1);
+  });
+
   it("upvotes a suggestion", async () => {
     await call("suggest", ENTRY);
     const [s] = await store.listOpen();
