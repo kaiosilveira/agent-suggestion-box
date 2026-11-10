@@ -61,7 +61,8 @@ One global install serves every project, so each command and each server finds i
 2. Otherwise walk up from the current directory to the first directory holding `.suggestion-box.json` or `.git`.
 3. If neither is found, refuse with a message that names `init` and `--root`, rather than create a box in a stray directory.
 
-Paths in `.suggestion-box.json` resolve against that root. An agent that starts the server from a subdirectory still gets the
+Paths in `.suggestion-box.json` resolve against that root. `SUGGESTION_BOX_FILE`, when set, replaces the file store's path (absolute,
+or against the root), so the repository keeps one config and each machine says where its box lives. An agent that starts the server from a subdirectory still gets the
 project's box.
 
 ## The MCP server
@@ -74,5 +75,11 @@ never product bugs; read the box first; one suggestion per post; keep each field
 
 ## The CLI
 
-`init`, `serve`, `list`, `triage`, `file <id> <ref>`, `drop <id> [why]`. `file` does not create an issue: the human files it
+`init`, `serve`, `list`, `ui`, `triage`, `file <id> <ref>`, `drop <id> [why]`. `file` does not create an issue: the human files it
 wherever they keep issues and passes the reference, which the box records.
+
+## The UI
+
+`ui` serves a read-only page on 127.0.0.1 ([ADR 7](adr/0007-local-read-only-ui.md)): `GET /` is the page, under a CSP with a
+per-request nonce, and `GET /api/suggestions` returns `{ project, version, generatedAt, suggestions }` from `listAll`. The page
+polls every 3 seconds, renders agent-written text through text nodes only, and turns backtick spans into code.

@@ -59,10 +59,20 @@ the process, not product bugs) and to read the box before posting.
 npx agent-suggestion-box init              # writes .suggestion-box.json and prints the MCP config to add to your agent
 npx agent-suggestion-box serve             # the MCP server over stdio (what your agent starts)
 npx agent-suggestion-box list              # the open suggestions, the most voted first
+npx agent-suggestion-box ui                # a live page of the box in your browser (127.0.0.1:4848)
 npx agent-suggestion-box triage            # walks them one by one: [f]ile, [d]rop, [s]kip
 npx agent-suggestion-box file <id> <ref>   # resolves it as filed, recording where it went (an issue URL, a ticket…)
 npx agent-suggestion-box drop <id> [why]   # resolves it without filing
 ```
+
+## The UI
+
+`suggestion-box ui` opens a page of the box: what is open, the most voted first, and what was filed (with where it went) or
+dropped (with why). It updates as agents post, searches every field, and works in light and dark. It is read-only: each
+open suggestion has buttons that copy its `file` and `drop` commands for the terminal.
+
+It listens on 127.0.0.1 only and loads nothing from the internet. `--port <n>` picks the port, `--no-open` only prints the
+address. See [ADR 7](docs/adr/0007-local-read-only-ui.md).
 
 ## Stores
 
@@ -86,6 +96,7 @@ new store (GitHub, Slack, a database…) plugs in without touching the domain, t
 ```
 
 Both fields are optional: with no file at all, the box is the file store at its default path. No network, no tokens.
+Set `SUGGESTION_BOX_FILE` to put the file elsewhere on one machine (absolute, or against the project root); it wins over the config.
 
 ## Layout
 
@@ -105,7 +116,10 @@ agent-suggestion-box/
 │   │   └── server.ts             # the three tools, over stdio
 │   ├── cli/
 │   │   ├── main.ts               # the suggestion-box binary
-│   │   └── run.ts                # init, serve, list, triage, file, drop
+│   │   └── run.ts                # init, serve, list, ui, triage, file, drop
+│   ├── ui/
+│   │   ├── server.ts             # the read-only page and /api/suggestions, on 127.0.0.1
+│   │   └── page.ts               # the page: markup, styles and script inline
 │   ├── config.ts                 # finds the project and reads .suggestion-box.json
 │   └── format.ts                 # how a suggestion reads in a terminal and to an agent
 ├── docs/
@@ -122,7 +136,7 @@ Each module's tests sit next to it as `*.test.ts`.
 
 ## Roadmap
 
-- **v0.1**: the three tools, the CLI, the `file` store.
+- **v0.1**: the three tools, the CLI, the `file` store, the read-only `ui`.
 - **v0.2**: `triage --agent`, a model that groups duplicates and drafts the issue (the radar's second, deduplicating agent).
 - **Later**: more stores (GitHub, Slack); `stats` (what got fixed, votes before it was).
 
