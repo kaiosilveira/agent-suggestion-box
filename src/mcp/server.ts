@@ -8,7 +8,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { findDuplicate } from "../domain/duplicate.js";
-import { LIMITS, SuggestionError, type SuggestionSnapshot } from "../domain/suggestion.js";
+import { LIMITS, SuggestionError } from "../domain/suggestion.js";
+import { formatSuggestion } from "../format.js";
 import type { SuggestionStore } from "../store/store.js";
 
 /** The `source` used when the agent leaves it out. */
@@ -42,7 +43,7 @@ export function createServer({ store, now, version, defaultSource }: ServerOptio
       run(async () => {
         const open = await store.listOpen();
         if (open.length === 0) return "The suggestion box is empty.";
-        return open.map(describe).join("\n\n");
+        return open.map(formatSuggestion).join("\n\n");
       }),
   );
 
@@ -116,13 +117,4 @@ async function run(body: () => Promise<string>): Promise<CallToolResult> {
     if (error instanceof SuggestionError) return { isError: true, content: [{ type: "text", text: error.message }] };
     throw error;
   }
-}
-
-function describe(s: SuggestionSnapshot): string {
-  return [
-    `${s.id} · ${s.votes} ${s.votes === 1 ? "vote" : "votes"} · posted ${s.postedAt.slice(0, 10)}`,
-    `  from: ${s.source}`,
-    `  hit: ${s.hit}`,
-    `  suggest: ${s.suggest}`,
-  ].join("\n");
 }
