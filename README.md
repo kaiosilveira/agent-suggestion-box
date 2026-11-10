@@ -1,7 +1,7 @@
 # agent-suggestion-box
 
-> **Status: scaffolded.** The project builds and its tests are listed, but nothing works yet. This README and
-> `docs/design.md` describe v0.1; the settled decisions are in `docs/adr/`.
+> **Status: v0.1 in progress, not yet published to npm.** The three MCP tools, the CLI and the file store work and are
+> tested; run it from a clone for now (see Development). The settled decisions are in `docs/adr/`.
 
 A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.
 
@@ -94,21 +94,20 @@ agent-suggestion-box/
 ├── src/
 │   ├── domain/
 │   │   ├── suggestion.ts         # the Suggestion and its rules (shape, limits, open/filed/dropped)
-│   │   ├── suggestion.test.ts
-│   │   ├── duplicate.ts          # the cheap duplicate check `suggest` runs before posting
-│   │   └── duplicate.test.ts
+│   │   └── duplicate.ts          # the cheap duplicate check `suggest` runs before posting
 │   ├── store/
 │   │   ├── store.ts              # the port: list, post, upvote, resolve
 │   │   ├── contract.ts           # one suite every store passes (called from each store's tests)
 │   │   ├── file-store.ts         # JSONL in the repository
-│   │   └── file-store.test.ts
+│   │   ├── open.ts               # the store the config names
+│   │   └── ulid.ts               # suggestion ids
 │   ├── mcp/
-│   │   ├── server.ts             # the three tools, over stdio
-│   │   └── server.test.ts
+│   │   └── server.ts             # the three tools, over stdio
 │   ├── cli/
-│   │   ├── main.ts               # init, serve, list, triage, file, drop
-│   │   └── triage.ts
-│   └── config.ts                 # reads and checks .suggestion-box.json
+│   │   ├── main.ts               # the suggestion-box binary
+│   │   └── run.ts                # init, serve, list, triage, file, drop
+│   ├── config.ts                 # finds the project and reads .suggestion-box.json
+│   └── format.ts                 # how a suggestion reads in a terminal and to an agent
 ├── docs/
 │   ├── design.md                 # the model, the port, the store, the MCP server
 │   └── adr/                      # one page per lasting decision, Nygard's format
@@ -118,6 +117,8 @@ agent-suggestion-box/
 ├── tsconfig.json
 └── README.md
 ```
+
+Each module's tests sit next to it as `*.test.ts`.
 
 ## Roadmap
 
@@ -133,6 +134,7 @@ npm test            # vitest
 npm run typecheck
 npm run build       # to dist/
 npm run dev -- list # run the CLI from source
+npm link            # put this checkout's suggestion-box on your PATH, as a global install would
 ```
 
 ## Licence
