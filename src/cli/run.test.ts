@@ -22,7 +22,10 @@ afterEach(async () => {
 
 const box = () => new FileStore(join(root, ".suggestion-box", "suggestions.jsonl"));
 
-async function cli(args: string[], { input = "", cwd = root }: { input?: string; cwd?: string } = {}) {
+async function cli(
+  args: string[],
+  { input = "", cwd = root, extra = {} }: { input?: string; cwd?: string; extra?: Partial<Io> } = {},
+) {
   let stdout = "";
   let stderr = "";
   const io: Io = {
@@ -32,6 +35,7 @@ async function cli(args: string[], { input = "", cwd = root }: { input?: string;
     stdin: Readable.from([input]),
     stdout: { write: (s) => void (stdout += s) },
     stderr: { write: (s) => void (stderr += s) },
+    ...extra,
   };
   const code = await run(args, io);
   return { code, stdout, stderr };
@@ -139,6 +143,39 @@ describe("the CLI", () => {
       expect((await cli(["triage"], { input: "q\n" })).code).toBe(0);
       expect((await cli(["triage"], { input: "" })).code).toBe(0);
       expect(await box().listOpen()).toHaveLength(2);
+    });
+  });
+
+  describe("ui", () => {
+    it("serves the box on the loopback interface and opens the browser", async () => {
+      await box().post(DRAFT, NOW);
+      const stop = new AbortController();
+      const opened: string[] = [];
+      const result = await cli(["ui", "--port", "0"], { extra: { signal: stop.signal, openUrl: (url) => opened.push(url) } });
+      try {
+        expect(result.code).toBe(0);
+        const url = /http:\/\/127\.0\.0\.1:\d+/.exec(result.stdout)?.[0];
+        expect(url).toBeDefined();
+        expect(opened).toEqual([url]);
+
+        const data = (await (await fetch(`${url}/api/suggestions`)).json()) as { project: string; suggestions: unknown[] };
+        expect(data.suggestions).toHaveLength(1);
+        expect(data.project).toBe(root.split(/[\\/]/).pop());
+      } finally {
+        stop.abort();
+      }
+    });
+
+    it("does not open the browser with --no-open", async () => {
+      const stop = new AbortController();
+      const opened: string[] = [];
+      await cli(["ui", "--port", "0", "--no-open"], { extra: { signal: stop.signal, openUrl: (url) => opened.push(url) } });
+      stop.abort();
+      expect(opened).toEqual([]);
+    });
+
+    it("refuses a port that is not a number", async () => {
+      expect((await cli(["ui", "--port", "web"])).code).toBe(2);
     });
   });
 });

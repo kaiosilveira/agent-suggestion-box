@@ -2,8 +2,10 @@
  * The CLI's commands. I/O comes in through `Io`, so tests run them without a process; main.ts wires the real one.
  */
 
+import { spawn } from "node:child_process";
 import { appendFile, readFile, writeFile } from "node:fs/promises";
-import { isAbsolute, join, relative } from "node:path";
+import type { AddressInfo } from "node:net";
+import { basename, isAbsolute, join, relative } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { CONFIG_FILE, ConfigError, ROOT_ENV, findRoot, loadConfig, type Config } from "../config.js";
@@ -12,6 +14,7 @@ import { formatSuggestion } from "../format.js";
 import { SOURCE_ENV, startServer } from "../mcp/server.js";
 import { openStore } from "../store/open.js";
 import type { SuggestionStore } from "../store/store.js";
+import { createUiServer } from "../ui/server.js";
 import { VERSION } from "../version.js";
 
 export interface Io {
@@ -21,13 +24,21 @@ export interface Io {
   stdin: NodeJS.ReadableStream;
   stdout: { write(text: string): void };
   stderr: { write(text: string): void };
+  /** Opens a URL in the browser; the system's opener when left out. */
+  openUrl?: (url: string) => void;
+  /** Stops long-running commands (ui) when aborted; tests use it. */
+  signal?: AbortSignal;
 }
+
+/** The ui command's default port; --port 0 picks a free one. */
+export const DEFAULT_UI_PORT = 4848;
 
 export const USAGE = `Usage: suggestion-box <command> [--root <dir>]
 
   init                 write .suggestion-box.json and print the MCP config for your agent
   serve                run the MCP server over stdio (what your agent starts)
   list [--json]        the open suggestions, the most voted first
+  ui [--port <n>]      a page of the box in your browser, live (--no-open to only print its address)
   triage               walk them one by one: [f]ile, [d]rop, [s]kip, [q]uit
   file <id> <ref>      resolve as filed, recording where it went (an issue URL, a ticket, a commit)
   drop <id> [why]      resolve without filing
@@ -43,7 +54,10 @@ export async function run(argv: string[], io: Io): Promise<number> {
     parsed = parseArgs({
       args: argv,
       allowPositionals: true,
+      allowNegative: true,
       options: {
+        port: { type: "string" },
+        open: { type: "boolean", default: true },
         root: { type: "string" },
         json: { type: "boolean", default: false },
         help: { type: "boolean", short: "h", default: false },
@@ -68,7 +82,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
 
   const project = async (): Promise<{ config: Config; store: SuggestionStore }> => {
     const root = await findRoot({ flag: values.root, env: io.env[ROOT_ENV], cwd: io.cwd });
-    const config = await loadConfig(root);
+    const config = await loadConfig(root, io.env);
     return { config, store: openStore(config) };
   };
 
@@ -105,6 +119,12 @@ export async function run(argv: string[], io: Io): Promise<number> {
       }
       case "triage":
         return await triage((await project()).store, io);
+      case "ui": {
+        const port = values.port === undefined ? DEFAULT_UI_PORT : Number(values.port);
+        if (!Number.isInteger(port) || port < 0 || port > 65535) throw new UsageError(`--port must be a port number, not ${values.port}`);
+        const { config, store } = await project();
+        return await ui({ store, project: basename(config.root), port, open: values.open }, io);
+      }
       default:
         throw new UsageError(`Unknown command: ${command}`);
     }
@@ -138,7 +158,7 @@ async function init(flag: string | undefined, io: Io): Promise<number> {
   );
   io.stdout.write(wrote ? `Wrote ${configPath}.\n` : `Kept the existing ${configPath}.\n`);
 
-  const config = await loadConfig(root);
+  const config = await loadConfig(root, io.env);
   const boxPath = relative(root, config.file.path);
   if (!boxPath.startsWith("..") && !isAbsolute(boxPath)) {
     const rule = `${boxPath.split("\\").join("/")} merge=union`;
@@ -217,5 +237,49 @@ async function triageOne(
       io.stdout.write(`Dropped ${suggestion.id}.\n`);
       return false;
     }
+  }
+}
+
+/** Serves the page until interrupted (or until io.signal aborts). */
+async function ui(
+  { store, project, port, open }: { store: SuggestionStore; project: string; port: number; open: boolean },
+  io: Io,
+): Promise<number> {
+  const server = createUiServer({ store, project, version: VERSION, now: io.now });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, "127.0.0.1", () => {
+        server.off("error", reject);
+        resolve();
+      });
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EADDRINUSE") {
+      throw new ConfigError(`port ${port} is in use. Is suggestion-box ui already running? Pick another with --port <n>.`);
+    }
+    throw error;
+  }
+  io.signal?.addEventListener("abort", () => server.close(), { once: true });
+
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  io.stdout.write(`The suggestion box for ${project} is at ${url}\nIt updates as agents post. Ctrl-C to stop.\n`);
+  if (open) (io.openUrl ?? openInBrowser)(url);
+  return 0;
+}
+
+function openInBrowser(url: string): void {
+  const [command, args] =
+    process.platform === "darwin"
+      ? ["open", [url]]
+      : process.platform === "win32"
+        ? ["cmd", ["/c", "start", "", url]]
+        : ["xdg-open", [url]];
+  try {
+    const child = spawn(command, args as string[], { stdio: "ignore", detached: true });
+    child.on("error", () => undefined);
+    child.unref();
+  } catch {
+    // no browser to open: the address is printed
   }
 }
