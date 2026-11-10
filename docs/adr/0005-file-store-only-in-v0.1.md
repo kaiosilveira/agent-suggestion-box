@@ -15,7 +15,7 @@ recorded-response tests before the core is proven, and would make GitHub look li
 ## Decision
 
 v0.1 has one store, `file`. Every store goes behind the `SuggestionStore` port (`src/store/store.ts`) and must pass the shared
-contract suite (`src/store/contract.test.ts`). `.suggestion-box.json` selects the store by name. Other stores (GitHub, Slack,
+contract suite (`src/store/contract.ts`). `.suggestion-box.json` selects the store by name. Other stores (GitHub, Slack,
 others) can be added later without changing the domain, the MCP server or the CLI.
 
 `file <id> <ref>` no longer creates an issue. It records `ref` (an issue URL, a ticket, a commit) and resolves the suggestion as

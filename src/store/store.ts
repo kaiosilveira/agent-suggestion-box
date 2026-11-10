@@ -1,7 +1,7 @@
 import type { SuggestionDraft, SuggestionSnapshot } from "../domain/suggestion.js";
 
 /**
- * The port every store implements. A store is done when it passes contract.test.ts.
+ * The port every store implements. A store is done when it passes contract.ts.
  * See docs/design.md, "The port", and docs/adr/0005.
  */
 export interface SuggestionStore {

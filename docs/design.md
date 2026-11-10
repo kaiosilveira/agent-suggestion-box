@@ -41,7 +41,7 @@ interface SuggestionStore {
 type ResolveRequest = { status: "filed"; ref: string } | { status: "dropped"; reason?: string };
 ```
 
-`contract.test.ts` runs one suite against every store (posting, listing in vote order, upvoting, refusing an upvote on a closed
+`contract.ts` runs one suite against every store (posting, listing in vote order, upvoting, refusing an upvote on a closed
 one, resolving once), so a store is done when it passes. The port is the extension point: v0.1 ships one store, and others
 (GitHub, Slack, a database) plug in behind it ([ADR 5](adr/0005-file-store-only-in-v0.1.md)).
 

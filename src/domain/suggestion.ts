@@ -35,8 +35,11 @@ export interface SuggestionSnapshot extends SuggestionDraft {
   postedAt: string;
 }
 
-/** `invalid`: the input breaks a rule. `closed`: the suggestion is already filed or dropped. */
-export type SuggestionErrorCode = "invalid" | "closed";
+/**
+ * `invalid`: the input breaks a rule. `closed`: the suggestion is already filed or dropped.
+ * `not-found`: no suggestion has that id (raised by stores).
+ */
+export type SuggestionErrorCode = "invalid" | "closed" | "not-found";
 
 export class SuggestionError extends Error {
   override readonly name = "SuggestionError";

@@ -70,7 +70,7 @@ npx agent-suggestion-box drop <id> [why]   # resolves it without filing
 |---|---|---|---|---|
 | `file` (default) | `.suggestion-box/suggestions.jsonl` in the repo | an event line | an event line | v0.1 |
 
-Every store implements one port (`src/store/store.ts`) and passes one contract suite (`src/store/contract.test.ts`), so a
+Every store implements one port (`src/store/store.ts`) and passes one contract suite (`src/store/contract.ts`), so a
 new store (GitHub, Slack, a database…) plugs in without touching the domain, the MCP server or the CLI. See
 `docs/adr/0005`.
 
@@ -99,7 +99,7 @@ agent-suggestion-box/
 │   │   └── duplicate.test.ts
 │   ├── store/
 │   │   ├── store.ts              # the port: list, post, upvote, resolve
-│   │   ├── contract.test.ts      # one suite every store passes
+│   │   ├── contract.ts           # one suite every store passes (called from each store's tests)
 │   │   ├── file-store.ts         # JSONL in the repository
 │   │   └── file-store.test.ts
 │   ├── mcp/
