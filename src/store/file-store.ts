@@ -23,10 +23,13 @@ export class FileStore implements SuggestionStore {
   ) {}
 
   async listOpen(): Promise<SuggestionSnapshot[]> {
-    const open = [...(await this.#fold()).values()]
-      .map((s) => s.toSnapshot())
-      .filter((s) => s.status === "open");
+    const open = (await this.listAll()).filter((s) => s.status === "open");
     return open.sort((a, b) => b.votes - a.votes || a.postedAt.localeCompare(b.postedAt));
+  }
+
+  /** In the order the log holds them: a Map keeps the order its keys were first set, which is posting order. */
+  async listAll(): Promise<SuggestionSnapshot[]> {
+    return [...(await this.#fold()).values()].map((s) => s.toSnapshot());
   }
 
   async post(draft: SuggestionDraft, now: Date): Promise<SuggestionSnapshot> {

@@ -33,6 +33,7 @@ Deduplication by a model is v0.2, in `triage`, never in the hot path.
 ```ts
 interface SuggestionStore {
   listOpen(): Promise<SuggestionSnapshot[]>;
+  listAll(): Promise<SuggestionSnapshot[]>;
   post(draft: SuggestionDraft, now: Date): Promise<SuggestionSnapshot>;
   upvote(id: string, note: string | undefined, now: Date): Promise<SuggestionSnapshot>;
   resolve(id: string, resolution: ResolveRequest, now: Date): Promise<void>;

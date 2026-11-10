@@ -46,6 +46,7 @@ the CLI do not change when you add one.
    ```ts
    interface SuggestionStore {
      listOpen(): Promise<SuggestionSnapshot[]>;
+     listAll(): Promise<SuggestionSnapshot[]>;
      post(draft: SuggestionDraft, now: Date): Promise<SuggestionSnapshot>;
      upvote(id: string, note: string | undefined, now: Date): Promise<SuggestionSnapshot>;
      resolve(id: string, resolution: ResolveRequest, now: Date): Promise<void>;

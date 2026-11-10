@@ -7,6 +7,8 @@ import type { SuggestionDraft, SuggestionSnapshot } from "../domain/suggestion.j
 export interface SuggestionStore {
   /** The open suggestions, the most voted first. */
   listOpen(): Promise<SuggestionSnapshot[]>;
+  /** Every suggestion, resolved ones included (ADR 4), in the order they were posted. */
+  listAll(): Promise<SuggestionSnapshot[]>;
   post(draft: SuggestionDraft, now: Date): Promise<SuggestionSnapshot>;
   upvote(id: string, note: string | undefined, now: Date): Promise<SuggestionSnapshot>;
   resolve(id: string, resolution: ResolveRequest, now: Date): Promise<void>;

@@ -92,6 +92,20 @@ export function storeContract(name: string, makeStore: () => Promise<SuggestionS
       expect(await errorCode(store.resolve(posted.id, { status: "dropped" }, day(12)))).toBe("closed");
     });
 
+    it("lists every suggestion, resolved ones with their resolution, in the order they were posted", async () => {
+      const first = await store.post(draft("first"), day(10));
+      const second = await store.post(draft("second"), day(11));
+      await store.upvote(second.id, undefined, day(11));
+      await store.resolve(first.id, { status: "filed", ref: "#7" }, day(12));
+
+      const all = await store.listAll();
+      expect(all.map((s) => [s.id, s.status, s.votes])).toEqual([
+        [first.id, "filed", 0],
+        [second.id, "open", 1],
+      ]);
+      expect(all[0]?.resolution).toEqual({ ref: "#7", at: day(12).toISOString() });
+    });
+
     it("refuses an unknown id", async () => {
       expect(await errorCode(store.upvote("nope", undefined, day(10)))).toBe("not-found");
       expect(await errorCode(store.resolve("nope", { status: "dropped" }, day(10)))).toBe("not-found");
