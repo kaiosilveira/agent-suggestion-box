@@ -145,10 +145,12 @@ a { color: var(--accent-ink); text-underline-offset: 2px; }
 .status.dropped { background: var(--dropped-soft); color: var(--dropped); }
 .status b { font-weight: 600; }
 .status .when { opacity: 0.8; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
-.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 5px 10px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
-.btn:hover { border-color: var(--line-strong); color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 -4px -8px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; background: none; border-radius: 8px; padding: 4px 8px; font-size: 13px; color: var(--ink-3); cursor: pointer; }
+.btn svg { opacity: 0.8; }
+.btn:hover { background: var(--surface-2); border-color: var(--line); color: var(--ink); }
 .btn code { font: 12px var(--mono); }
+.suggest code, .hit code { font-family: var(--mono); font-size: 0.86em; font-weight: 500; padding: 1px 5px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); }
 mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
 
 /* empty and footer */
@@ -170,6 +172,7 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
   .votes .k { margin: 0; }
   .meter { flex: 1; margin: 0 0 0 6px; align-self: center; }
   .search kbd { display: none; }
+  .btn .wide { display: none; }
   .live .txt { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -208,7 +211,7 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
     <label class="search">
       <span class="sr">Search suggestions</span>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Search what agents hit, suggest, or who posted" autocomplete="off">
+      <input id="q" type="search" placeholder="Search suggestions" autocomplete="off">
       <kbd>/</kbd>
     </label>
     <label><span class="sr">Sort</span>
@@ -279,6 +282,18 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
     return frag;
   }
 
+  /** Agents write \u0060code\u0060 in backticks: those spans become <code>, the rest stays text. Both get search marks. */
+  function rich(text) {
+    var frag = document.createDocumentFragment();
+    var parts = text.split(/\u0060([^\u0060]+)\u0060/);
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i] === "") continue;
+      if (i % 2 === 1) { var code = h("code"); code.appendChild(highlighted(parts[i])); frag.appendChild(code); }
+      else frag.appendChild(highlighted(parts[i]));
+    }
+    return frag;
+  }
+
   var rtf = typeof Intl !== "undefined" && Intl.RelativeTimeFormat ? new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }) : null;
   function ago(iso) {
     var then = new Date(iso).getTime();
@@ -316,20 +331,34 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
     }
   }
 
+  var SVG = "http://www.w3.org/2000/svg";
+  function copyIcon() {
+    var svg = document.createElementNS(SVG, "svg");
+    svg.setAttribute("width", "13"); svg.setAttribute("height", "13"); svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none"); svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("aria-hidden", "true");
+    var a = document.createElementNS(SVG, "rect");
+    a.setAttribute("x", "9"); a.setAttribute("y", "9"); a.setAttribute("width", "12"); a.setAttribute("height", "12"); a.setAttribute("rx", "2");
+    var b = document.createElementNS(SVG, "path");
+    b.setAttribute("d", "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1");
+    svg.appendChild(a); svg.appendChild(b);
+    return svg;
+  }
+
   function card(s, max, isNew) {
     var votes = h("div", { class: "votes", title: plural(s.votes, "run hit this after it was posted", "runs hit this after it was posted") },
       h("span", { class: "n", text: String(s.votes) }),
       h("span", { class: "k", text: s.votes === 1 ? "vote" : "votes" }),
       (function () {
         var bar = h("i");
-        bar.style.width = (max > 0 ? Math.max(4, Math.round((s.votes / max) * 100)) : 0) + "%";
+        bar.style.width = (max > 0 && s.votes > 0 ? Math.max(4, Math.round((s.votes / max) * 100)) : 0) + "%";
         return h("div", { class: "meter", "aria-hidden": "true" }, bar);
       })());
 
     var suggest = h("p", { class: "suggest" });
-    suggest.appendChild(highlighted(s.suggest));
+    suggest.appendChild(rich(s.suggest));
     var hit = h("p", { class: "hit" }, h("span", { class: "label", text: "Hit" }));
-    hit.appendChild(highlighted(s.hit));
+    hit.appendChild(rich(s.hit));
 
     var source = h("span", { class: "chip", title: "Who hit it" });
     source.appendChild(highlighted(s.source));
@@ -341,9 +370,9 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
     var body = h("div", { class: "body" }, suggest, hit, meta);
 
     if (s.status === "open") {
-      var file = h("button", { class: "btn", type: "button" }, "Copy ", h("code", { text: "file" }), " command");
+      var file = h("button", { class: "btn", type: "button", title: "Copy the command; add where it went" }, copyIcon(), "Copy ", h("code", { text: "file" }), h("span", { class: "wide", text: " command" }));
       file.addEventListener("click", function () { copy("suggestion-box file " + s.id + " ", "the file command: add where it went"); });
-      var drop = h("button", { class: "btn", type: "button" }, "Copy ", h("code", { text: "drop" }), " command");
+      var drop = h("button", { class: "btn", type: "button", title: "Copy the command; add why, if you like" }, copyIcon(), "Copy ", h("code", { text: "drop" }), h("span", { class: "wide", text: " command" }));
       drop.addEventListener("click", function () { copy("suggestion-box drop " + s.id + " ", "the drop command"); });
       body.appendChild(h("div", { class: "actions" }, file, drop));
     } else if (s.resolution) {
