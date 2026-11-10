@@ -1,0 +1,46 @@
+{
+  "name": "agent-suggestion-box",
+  "version": "0.0.0",
+  "description": "A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "suggestion-box": "dist/cli/main.js",
+    "agent-suggestion-box": "dist/cli/main.js"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "tsx src/cli/main.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "agents",
+    "claude-code",
+    "feedback",
+    "developer-tools"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
