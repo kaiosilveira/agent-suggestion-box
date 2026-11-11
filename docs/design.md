@@ -48,9 +48,11 @@ one, resolving once), so a store is done when it passes. The port is the extensi
 
 ## The file store
 
-`.suggestion-box/suggestions.jsonl`: one JSON event per line, appended, never rewritten: `posted`, `upvoted`, `resolved`. The
-state is folded from the events, so two agents in two worktrees append without a merge conflict on the same line (git's
-`union` merge driver, set by `init` in `.gitattributes`, keeps both sides). Resolved suggestions stay in the log, which is the
+A `suggestions.jsonl`, private to the person by default, in their data folder and keyed by the project's root
+([ADR 9](adr/0009-the-box-is-private-by-default.md)); `file.path` puts it in the repository instead. One JSON event per line,
+appended, never rewritten: `posted`, `upvoted`, `resolved`. The state is folded from the events, so agents append without a
+conflict on the same line, and a committed box merges across branches (git's `union` merge driver, set by `init` in
+`.gitattributes` for a box in the repository, keeps both sides). Resolved suggestions stay in the log, which is the
 history ([ADR 4](adr/0004-resolved-suggestions-stay-in-the-log.md)).
 
 ## Finding the project
@@ -64,7 +66,7 @@ One global install serves every project, so each command and each server finds i
 3. If neither is found, refuse with a message that names `init` and `--root`, rather than create a box in a stray directory.
 
 Paths in `.suggestion-box.json` resolve against that root. `SUGGESTION_BOX_FILE`, when set, replaces the file store's path (absolute,
-or against the root), so the repository keeps one config and each machine says where its box lives. An agent that starts the server from a subdirectory still gets the
+or against the root), an escape hatch for one machine: a worktree only sees it if it is set where every checkout's agent reads it. An agent that starts the server from a subdirectory still gets the
 project's box.
 
 ## The MCP server

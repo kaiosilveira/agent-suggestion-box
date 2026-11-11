@@ -13,7 +13,7 @@ fixed. (Thoughtworks Technology Radar, vol. 35, "Agent suggestion box", Assess; 
 
 - **Agents** read the open suggestions, upvote the one that matches what they hit, or post a new one, in a fixed shape.
 - **You** triage the box from the terminal: file a suggestion (record where it went: an issue, a ticket, a commit), or drop it. Either way it leaves the box.
-- **The box** is a file in your repository by default. Stores are pluggable, so it can live elsewhere later.
+- **The box** is a file private to you, outside your repository, shared by its worktrees. Stores are pluggable, so it can live elsewhere later.
 
 It works with any agent that speaks MCP (Claude Code, Codex, OpenCode, Cursor…), and it is about **your own harness**: your
 skills, scripts, prompts and checks. It is not a channel for reporting bugs to a third party's MCP server.
@@ -79,7 +79,7 @@ address. See [ADR 7](docs/adr/0007-local-read-only-ui.md).
 
 | Store | The box is | A vote is | Resolved is | Status |
 |---|---|---|---|---|
-| `file` (default) | `.suggestion-box/suggestions.jsonl` in the repo | an event line | an event line | v0.1 |
+| `file` (default) | a `suggestions.jsonl` in your data folder, or wherever `file.path` says | an event line | an event line | v0.1 |
 
 Every store implements one port (`src/store/store.ts`) and passes one contract suite (`src/store/contract.ts`), so a
 new store (GitHub, Slack, a database…) plugs in without touching the domain, the MCP server or the CLI. See
@@ -96,7 +96,11 @@ new store (GitHub, Slack, a database…) plugs in without touching the domain, t
 }
 ```
 
-Both fields are optional: with no file at all, the box is the file store at its default path. No network, no tokens.
+Both fields are optional. With no `file.path`, the box is private to you, outside the repository:
+`<data folder>/suggestion-box/<project>-<hash>/suggestions.jsonl`, the data folder being `XDG_DATA_HOME`, else
+`~/Library/Application Support` (macOS), `%LOCALAPPDATA%` (Windows) or `~/.local/share`. Every worktree of the repository shares
+it, and `list_suggestions` names the file it read. Name a path in the repository to commit the box instead; `init` then adds a
+`union` merge rule for it. No network, no tokens. See `docs/adr/0009`.
 Set `SUGGESTION_BOX_FILE` to put the file elsewhere on one machine (absolute, or against the project root); it wins over the config.
 
 ## Layout

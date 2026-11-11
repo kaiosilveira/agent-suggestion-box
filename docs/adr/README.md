@@ -13,3 +13,4 @@ once accepted; a later record supersedes it.
 | [0006](0006-node-22-or-later.md) | Node 22 or later | Accepted, amends 0002 |
 | [0007](0007-local-read-only-ui.md) | A local, read-only UI | Accepted |
 | [0008](0008-worktrees-share-the-main-box.md) | Worktrees share the main worktree's box | Accepted |
+| [0009](0009-the-box-is-private-by-default.md) | The box is private by default, outside the repository | Accepted |
