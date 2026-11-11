@@ -43,14 +43,33 @@ describe("findRoot", () => {
     expect(await findRoot({ cwd: await dir("project", "src", "deep") })).toBe(project);
   });
 
-  it("walks up to the nearest .git when there is no config, directory or file (a worktree)", async () => {
+  it("walks up to the nearest .git when there is no config", async () => {
     const repo = await dir("repo");
     await mkdir(join(repo, ".git"));
     expect(await findRoot({ cwd: await dir("repo", "src") })).toBe(repo);
+  });
 
+  it("resolves a linked worktree to its main worktree, so they share one box", async () => {
+    const repo = await dir("repo");
+    const gitDir = await dir("repo", ".git", "worktrees", "w");
+    await writeFile(join(gitDir, "commondir"), "../..\n");
+    const worktree = await dir("worktree");
+    await writeFile(join(worktree, ".suggestion-box.json"), "{}");
+    await writeFile(join(worktree, ".git"), "gitdir: ../repo/.git/worktrees/w\n");
+    expect(await findRoot({ cwd: await dir("worktree", "src") })).toBe(repo);
+  });
+
+  it("keeps a .git file's directory when it is not a linked worktree (a submodule)", async () => {
+    await dir("repo", ".git", "modules", "sub");
+    const sub = await dir("repo", "sub");
+    await writeFile(join(sub, ".git"), "gitdir: ../.git/modules/sub\n");
+    expect(await findRoot({ cwd: sub })).toBe(sub);
+  });
+
+  it("lets --root pick a worktree itself", async () => {
     const worktree = await dir("worktree");
     await writeFile(join(worktree, ".git"), "gitdir: ../repo/.git/worktrees/w\n");
-    expect(await findRoot({ cwd: worktree })).toBe(worktree);
+    expect(await findRoot({ flag: worktree, cwd: base })).toBe(worktree);
   });
 
   it("refuses when neither is found, naming init and --root", async () => {

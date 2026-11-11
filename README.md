@@ -29,7 +29,8 @@ claude mcp add --scope user suggestion-box -- suggestion-box serve   # Claude Co
 ```
 
 Or run it without installing: `npx agent-suggestion-box <command>`. Each project keeps its own box; the server finds the
-project it was started in (the nearest `.suggestion-box.json` or `.git` above it, or `--root`).
+project it was started in (the nearest `.suggestion-box.json` or `.git` above it, or `--root`); every git worktree of a
+repository shares the main worktree's box.
 
 ## The shape of a suggestion
 

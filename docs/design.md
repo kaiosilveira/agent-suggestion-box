@@ -58,7 +58,9 @@ history ([ADR 4](adr/0004-resolved-suggestions-stay-in-the-log.md)).
 One global install serves every project, so each command and each server finds its project at start:
 
 1. `--root <dir>` if given, else `SUGGESTION_BOX_ROOT` if set.
-2. Otherwise walk up from the current directory to the first directory holding `.suggestion-box.json` or `.git`.
+2. Otherwise walk up from the current directory to the first directory holding `.suggestion-box.json` or `.git`. A linked
+   git worktree resolves to its main worktree (read from its `.git` file and the `commondir` it leads to), so agents in
+   several worktrees of one repository read and vote on one box, and a box is not lost when its worktree is removed.
 3. If neither is found, refuse with a message that names `init` and `--root`, rather than create a box in a stray directory.
 
 Paths in `.suggestion-box.json` resolve against that root. `SUGGESTION_BOX_FILE`, when set, replaces the file store's path (absolute,

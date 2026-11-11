@@ -5,7 +5,7 @@
  */
 
 import { readFile, stat } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { DEFAULT_PATH } from "./store/file-store.js";
 
@@ -43,7 +43,10 @@ export interface FindRootOptions {
   stopAt?: string;
 }
 
-/** --root, then SUGGESTION_BOX_ROOT, then the nearest ancestor holding .suggestion-box.json or .git. */
+/**
+ * --root, then SUGGESTION_BOX_ROOT, then the nearest ancestor holding .suggestion-box.json or .git. A linked git worktree
+ * resolves to its main worktree, so every worktree of a repository shares one box.
+ */
 export async function findRoot({ flag, env, cwd, stopAt }: FindRootOptions): Promise<string> {
   const explicit = flag ?? (env === "" ? undefined : env);
   if (explicit !== undefined) {
@@ -53,7 +56,7 @@ export async function findRoot({ flag, env, cwd, stopAt }: FindRootOptions): Pro
   }
 
   for (let dir = resolve(cwd); ; dir = dirname(dir)) {
-    if ((await exists(join(dir, CONFIG_FILE))) || (await exists(join(dir, ".git")))) return dir;
+    if ((await exists(join(dir, CONFIG_FILE))) || (await exists(join(dir, ".git")))) return (await mainWorktree(dir)) ?? dir;
     if (dir === dirname(dir) || (stopAt !== undefined && dir === resolve(stopAt))) break;
   }
   throw new ConfigError(
@@ -80,6 +83,26 @@ export async function loadConfig(root: string, env: { [FILE_ENV]?: string | unde
     store: parsed.data.store,
     file: { path: resolve(root, (env[FILE_ENV] || undefined) ?? parsed.data.file?.path ?? DEFAULT_PATH) },
   };
+}
+
+/**
+ * The main worktree of a linked worktree at `dir`, read from git's files rather than by running git: `.git` is a file
+ * naming the worktree's git dir, whose `commondir` leads to the repository's `.git`. Undefined for anything else (a main
+ * worktree, a submodule, a bare repository's worktree).
+ */
+async function mainWorktree(dir: string): Promise<string | undefined> {
+  const dotGit = join(dir, ".git");
+  if (!(await stat(dotGit).then((s) => s.isFile(), () => false))) return undefined;
+  const gitDir = /^gitdir:\s*(.+)$/m.exec(await readFile(dotGit, "utf8"))?.[1]?.trim();
+  if (gitDir === undefined) return undefined;
+  const absoluteGitDir = resolve(dir, gitDir);
+  const commonDir = await readFile(join(absoluteGitDir, "commondir"), "utf8").then(
+    (text) => resolve(absoluteGitDir, text.trim()),
+    () => undefined,
+  );
+  if (commonDir === undefined || basename(commonDir) !== ".git") return undefined;
+  const main = dirname(commonDir);
+  return (await isDirectory(main)) ? main : undefined;
 }
 
 async function exists(path: string): Promise<boolean> {
