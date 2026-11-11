@@ -91,9 +91,9 @@ export async function run(argv: string[], io: Io): Promise<number> {
       case "init":
         return await init(values.root, io);
       case "serve": {
-        const { store } = await project();
+        const { config, store } = await project();
         const defaultSource = io.env[SOURCE_ENV];
-        await startServer({ store, now: io.now, version: VERSION, ...(defaultSource ? { defaultSource } : {}) });
+        await startServer({ store, now: io.now, version: VERSION, box: config.file.path, ...(defaultSource ? { defaultSource } : {}) });
         return 0;
       }
       case "list": {

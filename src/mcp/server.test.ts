@@ -20,7 +20,7 @@ let store: SuggestionStore;
 let client: Client;
 
 async function connect(defaultSource?: string) {
-  const server = createServer({ store, now: () => NOW, version: "0.0.0-test", ...(defaultSource ? { defaultSource } : {}) });
+  const server = createServer({ store, now: () => NOW, version: "0.0.0-test", box: "/repo/box.jsonl", ...(defaultSource ? { defaultSource } : {}) });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   await server.connect(serverSide);
   client = new Client({ name: "test", version: "0.0.0" });
@@ -57,8 +57,8 @@ describe("MCP server", () => {
     expect(suggest).toMatch(/product bugs/);
   });
 
-  it("lists an empty box", async () => {
-    expect(await call("list_suggestions")).toEqual({ isError: false, text: expect.stringMatching(/empty/) });
+  it("lists an empty box, naming it", async () => {
+    expect(await call("list_suggestions")).toEqual({ isError: false, text: "The suggestion box at /repo/box.jsonl is empty." });
   });
 
   it("posts a suggestion and lists it", async () => {
@@ -68,6 +68,7 @@ describe("MCP server", () => {
     expect(posted.text).toContain(id);
 
     const listed = await call("list_suggestions");
+    expect(listed.text).toMatch(/^The suggestion box at \/repo\/box\.jsonl:/);
     expect(listed.text).toContain(id);
     expect(listed.text).toContain(ENTRY.suggest);
   });

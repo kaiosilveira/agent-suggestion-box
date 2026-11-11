@@ -19,6 +19,8 @@ export interface ServerOptions {
   store: SuggestionStore;
   now: () => Date;
   version: string;
+  /** Where the box lives (the file store's path), named in list_suggestions so the agent knows which box it read. */
+  box: string;
   /** From SUGGESTION_BOX_SOURCE: the source when the agent gives none. */
   defaultSource?: string;
 }
@@ -27,7 +29,7 @@ const WHAT_TO_POST =
   "Post friction with the process you work in: a tool, script, skill, prompt, check or doc that cost you a retry, a guess " +
   "or minutes. Never product bugs (those belong in the project's issues), never third-party tools you cannot change.";
 
-export function createServer({ store, now, version, defaultSource }: ServerOptions): McpServer {
+export function createServer({ store, now, version, box, defaultSource }: ServerOptions): McpServer {
   const server = new McpServer({ name: "agent-suggestion-box", version });
   const run = serial();
 
@@ -43,8 +45,8 @@ export function createServer({ store, now, version, defaultSource }: ServerOptio
     () =>
       run(async () => {
         const open = await store.listOpen();
-        if (open.length === 0) return "The suggestion box is empty.";
-        return open.map(formatSuggestion).join("\n\n");
+        if (open.length === 0) return `The suggestion box at ${box} is empty.`;
+        return [`The suggestion box at ${box}:`, ...open.map(formatSuggestion)].join("\n\n");
       }),
   );
 
