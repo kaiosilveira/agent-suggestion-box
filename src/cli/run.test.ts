@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { privateBoxPath } from "../config.js";
 import { FileStore } from "../store/file-store.js";
 import { run, type Io } from "./run.js";
 
@@ -10,17 +11,21 @@ const NOW = new Date("2026-11-10T12:00:00.000Z");
 const DRAFT = { source: "implement on #42", hit: "lost five minutes", suggest: "add a retry to check.sh" };
 
 let root: string;
+let data: string;
 
 beforeEach(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), "suggestion-box-cli-")));
+  data = await realpath(await mkdtemp(join(tmpdir(), "suggestion-box-data-")));
   await mkdir(join(root, ".git"));
 });
 
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
+  await rm(data, { recursive: true, force: true });
 });
 
-const box = () => new FileStore(join(root, ".suggestion-box", "suggestions.jsonl"));
+const env = () => ({ XDG_DATA_HOME: data });
+const box = () => new FileStore(privateBoxPath(root, env()));
 
 async function cli(
   args: string[],
@@ -30,7 +35,7 @@ async function cli(
   let stderr = "";
   const io: Io = {
     cwd,
-    env: {},
+    env: env(),
     now: () => NOW,
     stdin: Readable.from([input]),
     stdout: { write: (s) => void (stdout += s) },
@@ -48,12 +53,12 @@ describe("the CLI", () => {
   });
 
   describe("init", () => {
-    it("writes the config, the union merge rule and prints the MCP config", async () => {
+    it("writes the config and prints the MCP config, with no merge rule for a box kept outside the repo", async () => {
       const result = await cli(["init"]);
 
       expect(result.code).toBe(0);
       expect(JSON.parse(await readFile(join(root, ".suggestion-box.json"), "utf8"))).toEqual({ store: "file" });
-      expect(await readFile(join(root, ".gitattributes"), "utf8")).toBe(".suggestion-box/suggestions.jsonl merge=union\n");
+      await expect(readFile(join(root, ".gitattributes"), "utf8")).rejects.toThrow();
       expect(result.stdout).toContain("claude mcp add --scope user suggestion-box -- suggestion-box serve");
       expect(result.stdout).toContain('"command": "suggestion-box"');
     });
@@ -115,7 +120,7 @@ describe("the CLI", () => {
       const s = await box().post(DRAFT, NOW);
       expect(await cli(["drop", s.id, "already", "fixed"])).toMatchObject({ code: 0 });
       expect(await box().listOpen()).toEqual([]);
-      expect(await readFile(join(root, ".suggestion-box", "suggestions.jsonl"), "utf8")).toContain('"reason":"already fixed"');
+      expect(await readFile(privateBoxPath(root, env()), "utf8")).toContain('"reason":"already fixed"');
     });
 
     it("explains an unknown id", async () => {

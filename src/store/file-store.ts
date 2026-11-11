@@ -1,5 +1,5 @@
 /**
- * The file store: `.suggestion-box/suggestions.jsonl`, one JSON event per line (`posted`, `upvoted`, `resolved`),
+ * The file store: a `suggestions.jsonl`, one JSON event per line (`posted`, `upvoted`, `resolved`),
  * appended and never rewritten. State is folded from the events. See docs/design.md and docs/adr/0004.
  */
 
@@ -9,7 +9,7 @@ import { Suggestion, SuggestionError, type SuggestionDraft, type SuggestionSnaps
 import type { ResolveRequest, SuggestionStore } from "./store.js";
 import { ulid } from "./ulid.js";
 
-export const DEFAULT_PATH = ".suggestion-box/suggestions.jsonl";
+export const BOX_FILE = "suggestions.jsonl";
 
 type Event =
   | ({ type: "posted"; id: string; at: string } & SuggestionDraft)

@@ -4,10 +4,12 @@
  * plug in without changing callers (docs/adr/0005).
  */
 
+import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
+import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
-import { DEFAULT_PATH } from "./store/file-store.js";
+import { BOX_FILE } from "./store/file-store.js";
 
 export const CONFIG_FILE = ".suggestion-box.json";
 
@@ -65,7 +67,25 @@ export async function findRoot({ flag, env, cwd, stopAt }: FindRootOptions): Pro
   );
 }
 
-export async function loadConfig(root: string, env: { [FILE_ENV]?: string | undefined } = {}): Promise<Config> {
+type Env = Record<string, string | undefined>;
+
+/**
+ * The box when the config names no path: private to the person, in their data folder, keyed by the project's root so
+ * every worktree and session on the machine shares it and no commit sweeps it up (docs/adr/0009).
+ */
+export function privateBoxPath(root: string, env: Env = {}, platform: NodeJS.Platform = process.platform): string {
+  const data =
+    env.XDG_DATA_HOME ||
+    (platform === "darwin"
+      ? join(homedir(), "Library", "Application Support")
+      : platform === "win32"
+        ? (env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"))
+        : join(homedir(), ".local", "share"));
+  const key = `${basename(root)}-${createHash("sha256").update(root).digest("hex").slice(0, 8)}`;
+  return join(data, "suggestion-box", key, BOX_FILE);
+}
+
+export async function loadConfig(root: string, env: Env = {}): Promise<Config> {
   const path = join(root, CONFIG_FILE);
   let raw: unknown = {};
   try {
@@ -81,7 +101,7 @@ export async function loadConfig(root: string, env: { [FILE_ENV]?: string | unde
   return {
     root,
     store: parsed.data.store,
-    file: { path: resolve(root, (env[FILE_ENV] || undefined) ?? parsed.data.file?.path ?? DEFAULT_PATH) },
+    file: { path: resolve(root, (env[FILE_ENV] || undefined) ?? parsed.data.file?.path ?? privateBoxPath(root, env)) },
   };
 }
 

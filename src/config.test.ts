@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ConfigError, findRoot, loadConfig } from "./config.js";
+import { ConfigError, findRoot, loadConfig, privateBoxPath } from "./config.js";
 
 let base: string;
 
@@ -79,12 +79,19 @@ describe("findRoot", () => {
 });
 
 describe("loadConfig", () => {
-  it("uses the default file store when there is no config file", async () => {
-    expect(await loadConfig(base)).toEqual({
-      root: base,
-      store: "file",
-      file: { path: join(base, ".suggestion-box", "suggestions.jsonl") },
-    });
+  it("uses a private box outside the project when there is no config file", async () => {
+    const env = { XDG_DATA_HOME: join(base, "data") };
+    expect(await loadConfig(base, env)).toEqual({ root: base, store: "file", file: { path: privateBoxPath(base, env) } });
+  });
+
+  it("keeps a private box per project, named after it, in the data folder of each platform", () => {
+    const one = privateBoxPath("/work/app", { XDG_DATA_HOME: "/data" });
+    expect(one).toMatch(/^\/data\/suggestion-box\/app-[0-9a-f]{8}\/suggestions\.jsonl$/);
+    expect(privateBoxPath("/work/app", { XDG_DATA_HOME: "/data" })).toBe(one);
+    expect(privateBoxPath("/other/app", { XDG_DATA_HOME: "/data" })).not.toBe(one);
+    expect(privateBoxPath("/work/app", {}, "darwin")).toContain(join("Library", "Application Support", "suggestion-box"));
+    expect(privateBoxPath("/work/app", { LOCALAPPDATA: "/local" }, "win32")).toMatch(/^\/local/);
+    expect(privateBoxPath("/work/app", {}, "linux")).toContain(join(".local", "share", "suggestion-box"));
   });
 
   it("resolves the file store's path against the root", async () => {
