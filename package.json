@@ -1,6 +1,6 @@
 {
   "name": "agent-suggestion-box",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.",
   "license": "MIT",
   "type": "module",
