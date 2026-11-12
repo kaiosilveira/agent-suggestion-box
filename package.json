@@ -44,7 +44,7 @@
     "esbuild@0.28.2": true
   },
   "author": "Kaio Silveira",
-  "homepage": "https://github.com/kaiosilveira/agent-suggestion-box#readme",
+  "homepage": "https://kaiosilveira.github.io/agent-suggestion-box/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kaiosilveira/agent-suggestion-box.git"
