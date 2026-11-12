@@ -7,7 +7,7 @@ Thanks for helping. This guide covers the setup, how changes are made, and the m
 You need Node 22.12 or later.
 
 ```bash
-git clone <this repository> && cd agent-suggestion-box
+git clone https://github.com/kaiosilveira/agent-suggestion-box.git && cd agent-suggestion-box
 npm install
 npm test            # Vitest
 npm run typecheck
@@ -26,7 +26,7 @@ npm link            # put this checkout's suggestion-box on your PATH
   `docs: …`. One logical change per commit.
 - **Lasting decisions get an ADR** in `docs/adr/`, in Nygard's format. An accepted ADR is not rewritten. A later one amends
   or supersedes it, and the index in `docs/adr/README.md` says so.
-- CI runs typecheck, tests and build on Node 22, 24 and 26. A pull request should pass all three locally first.
+- CI runs typecheck, tests and build on Node 22, 24 and 26, on Linux, macOS and Windows. A pull request should pass all three locally first.
 
 ## Two rules that keep the tool what it is
 
@@ -37,8 +37,8 @@ npm link            # put this checkout's suggestion-box on your PATH
 
 ## Adding a store
 
-A store is where the box lives. v0.1 ships one, the JSONL file in the repository
-([ADR 5](docs/adr/0005-file-store-only-in-v0.1.md)). Every store sits behind one port, so the domain, the MCP server and
+A store is where the box lives. v0.1 ships one, a JSONL file that is private to you by default
+([ADR 5](docs/adr/0005-file-store-only-in-v0.1.md), [ADR 9](docs/adr/0009-the-box-is-private-by-default.md)). Every store sits behind one port, so the domain, the MCP server and
 the CLI do not change when you add one.
 
 1. **Implement the port** in `src/store/<name>-store.ts`:
