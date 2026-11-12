@@ -74,3 +74,15 @@ the CLI do not change when you add one.
 
 Keep resolved suggestions readable ([ADR 4](docs/adr/0004-resolved-suggestions-stay-in-the-log.md)): a store hides them from
 `listOpen`, never deletes them.
+
+## Releasing
+
+From a clean `main` that is level with `origin/main`, and logged in to npm:
+
+```sh
+npm run release -- patch   # or minor, major, or an exact x.y.z
+```
+
+It runs the checks, bumps the version, commits `chore(release): x.y.z`, tags `vx.y.z`, publishes to npm and pushes the
+commit and the tag together. If the publish fails, the commit and the tag are undone, so a tag always means a version on
+npm. Don't run `npm publish` or `npm version` by hand.

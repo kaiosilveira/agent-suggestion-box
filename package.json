@@ -21,7 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "tsx src/cli/main.ts",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
+    "release": "node scripts/release.mjs"
   },
   "keywords": [
     "mcp",
