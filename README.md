@@ -1,5 +1,8 @@
 # agent-suggestion-box
 
+[![npm](https://img.shields.io/npm/v/agent-suggestion-box)](https://www.npmjs.com/package/agent-suggestion-box)
+[![CI](https://github.com/kaiosilveira/agent-suggestion-box/actions/workflows/ci.yml/badge.svg)](https://github.com/kaiosilveira/agent-suggestion-box/actions/workflows/ci.yml)
+
 > **Status: v0.1.** The three MCP tools, the CLI, the file store and the read-only UI work and are tested. It is young, so
 > expect changes before 1.0. The settled decisions are in `docs/adr/`.
 
