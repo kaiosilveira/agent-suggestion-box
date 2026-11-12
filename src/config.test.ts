@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ConfigError, findRoot, loadConfig, privateBoxPath } from "./config.js";
 
@@ -86,11 +86,13 @@ describe("loadConfig", () => {
 
   it("keeps a private box per project, named after it, in the data folder of each platform", () => {
     const one = privateBoxPath("/work/app", { XDG_DATA_HOME: "/data" });
-    expect(one).toMatch(/^\/data\/suggestion-box\/app-[0-9a-f]{8}\/suggestions\.jsonl$/);
+    expect(dirname(dirname(one))).toBe(join("/data", "suggestion-box"));
+    expect(basename(dirname(one))).toMatch(/^app-[0-9a-f]{8}$/);
+    expect(basename(one)).toBe("suggestions.jsonl");
     expect(privateBoxPath("/work/app", { XDG_DATA_HOME: "/data" })).toBe(one);
     expect(privateBoxPath("/other/app", { XDG_DATA_HOME: "/data" })).not.toBe(one);
     expect(privateBoxPath("/work/app", {}, "darwin")).toContain(join("Library", "Application Support", "suggestion-box"));
-    expect(privateBoxPath("/work/app", { LOCALAPPDATA: "/local" }, "win32")).toMatch(/^\/local/);
+    expect(privateBoxPath("/work/app", { LOCALAPPDATA: "/local" }, "win32")).toContain(join("/local", "suggestion-box"));
     expect(privateBoxPath("/work/app", {}, "linux")).toContain(join(".local", "share", "suggestion-box"));
   });
 
@@ -101,7 +103,7 @@ describe("loadConfig", () => {
 
   it("lets SUGGESTION_BOX_FILE override the configured path, resolved against the root", async () => {
     await writeFile(join(base, ".suggestion-box.json"), JSON.stringify({ store: "file", file: { path: "box.jsonl" } }));
-    expect((await loadConfig(base, { SUGGESTION_BOX_FILE: "/elsewhere/box.jsonl" })).file.path).toBe("/elsewhere/box.jsonl");
+    expect((await loadConfig(base, { SUGGESTION_BOX_FILE: "/elsewhere/box.jsonl" })).file.path).toBe(resolve("/elsewhere/box.jsonl"));
     expect((await loadConfig(base, { SUGGESTION_BOX_FILE: "other.jsonl" })).file.path).toBe(join(base, "other.jsonl"));
     expect((await loadConfig(base, { SUGGESTION_BOX_FILE: "" })).file.path).toBe(join(base, "box.jsonl"));
   });
