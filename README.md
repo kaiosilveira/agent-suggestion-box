@@ -1,7 +1,7 @@
 # agent-suggestion-box
 
-> **Status: v0.1 in progress, not yet published to npm.** The three MCP tools, the CLI, the file store and the read-only UI
-> work and are tested; run it from a clone for now (see [Install](#install)). The settled decisions are in `docs/adr/`.
+> **Status: v0.1.** The three MCP tools, the CLI, the file store and the read-only UI work and are tested. It is young, so
+> expect changes before 1.0. The settled decisions are in `docs/adr/`.
 
 A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.
 
@@ -20,24 +20,16 @@ skills, scripts, prompts and checks. It is not a channel for reporting bugs to a
 
 ## Install
 
-It needs Node 22.12 or later. Until it is on npm, install it from a clone:
+It needs Node 22.12 or later. Install it once and use it in every project:
 
 ```bash
-git clone https://github.com/kaiosilveira/agent-suggestion-box.git && cd agent-suggestion-box
-npm install && npm run build
-npm link                                   # puts suggestion-box on your PATH, as a global install would
-```
-
-Then use it in every project:
-
-```bash
+npm install -g agent-suggestion-box
 cd your-project && suggestion-box init
 claude mcp add --scope user suggestion-box -- suggestion-box serve   # Claude Code, for every project
 ```
 
-Once it is published, `npm install -g agent-suggestion-box` replaces the clone, and `npx agent-suggestion-box <command>` runs
-it without installing. Other agents take the usual MCP config, which `init` prints; see
-[examples/claude-code.md](examples/claude-code.md) for Claude Code.
+Or run it without installing: `npx agent-suggestion-box <command>`. Other agents take the usual MCP config, which `init`
+prints; see [examples/claude-code.md](examples/claude-code.md) for Claude Code.
 
 Each project keeps its own box. The server finds the project it was started in: `--root <dir>`, else `SUGGESTION_BOX_ROOT`,
 else the nearest `.suggestion-box.json` or `.git` above it. Every git worktree of a repository shares the main worktree's
