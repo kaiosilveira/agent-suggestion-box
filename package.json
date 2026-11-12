@@ -42,5 +42,14 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "author": "Kaio Silveira",
+  "homepage": "https://github.com/kaiosilveira/agent-suggestion-box#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaiosilveira/agent-suggestion-box.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kaiosilveira/agent-suggestion-box/issues"
   }
 }
