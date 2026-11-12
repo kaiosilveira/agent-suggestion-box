@@ -1,7 +1,7 @@
 # agent-suggestion-box
 
-> **Status: v0.1 in progress, not yet published to npm.** The three MCP tools, the CLI and the file store work and are
-> tested; run it from a clone for now (see Development). The settled decisions are in `docs/adr/`.
+> **Status: v0.1 in progress, not yet published to npm.** The three MCP tools, the CLI, the file store and the read-only UI
+> work and are tested; run it from a clone for now (see [Install](#install)). The settled decisions are in `docs/adr/`.
 
 A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.
 
@@ -20,17 +20,28 @@ skills, scripts, prompts and checks. It is not a channel for reporting bugs to a
 
 ## Install
 
-It needs Node 22 or later. Install it once and use it in every project:
+It needs Node 22.12 or later. Until it is on npm, install it from a clone:
 
 ```bash
-npm install -g agent-suggestion-box
+git clone https://github.com/kaiosilveira/agent-suggestion-box.git && cd agent-suggestion-box
+npm install && npm run build
+npm link                                   # puts suggestion-box on your PATH, as a global install would
+```
+
+Then use it in every project:
+
+```bash
 cd your-project && suggestion-box init
 claude mcp add --scope user suggestion-box -- suggestion-box serve   # Claude Code, for every project
 ```
 
-Or run it without installing: `npx agent-suggestion-box <command>`. Each project keeps its own box; the server finds the
-project it was started in (the nearest `.suggestion-box.json` or `.git` above it, or `--root`); every git worktree of a
-repository shares the main worktree's box.
+Once it is published, `npm install -g agent-suggestion-box` replaces the clone, and `npx agent-suggestion-box <command>` runs
+it without installing. Other agents take the usual MCP config, which `init` prints; see
+[examples/claude-code.md](examples/claude-code.md) for Claude Code.
+
+Each project keeps its own box. The server finds the project it was started in: `--root <dir>`, else `SUGGESTION_BOX_ROOT`,
+else the nearest `.suggestion-box.json` or `.git` above it. Every git worktree of a repository shares the main worktree's
+box.
 
 ## The shape of a suggestion
 
@@ -38,33 +49,36 @@ Every suggestion has the same four parts, kept short:
 
 | Field | What it holds |
 |---|---|
-| `source` | who hit it: the agent, skill or stage, and the task it was on (`implement on #42`) |
-| `hit` | what happened and what it cost: a retry, a guess, minutes |
-| `suggest` | the change: which file, what it would say or do |
+| `source` | who hit it: the agent, skill or stage, and the task it was on (`implement on #42`); at most 120 characters |
+| `hit` | what happened and what it cost: a retry, a guess, minutes; at most 500 characters |
+| `suggest` | the change: which file, what it would say or do; at most 500 characters |
 | `votes` | how many runs have hit the same thing since it was posted |
 
 ## For agents: the MCP tools
 
 | Tool | Does |
 |---|---|
-| `list_suggestions` | the open suggestions, the most voted first |
+| `list_suggestions` | the open suggestions, the most voted first, and the file they were read from |
 | `suggest` | posts a new one (`source`, `hit`, `suggest`); refused with the match's id when one open suggestion is the same |
 | `upvote` | adds a vote to an open suggestion, with an optional line of what this run saw |
 
 Agents never resolve suggestions: that is the human's call. The tools' descriptions tell the agent when to post (friction with
-the process, not product bugs) and to read the box before posting.
+the process, not product bugs) and to read the box before posting. Set `SUGGESTION_BOX_SOURCE` in the server's environment
+to name the `source` when the agent leaves it out (a loop, a stage, a CI job).
 
 ## For you: the CLI
 
 ```bash
-npx agent-suggestion-box init              # writes .suggestion-box.json and prints the MCP config to add to your agent
-npx agent-suggestion-box serve             # the MCP server over stdio (what your agent starts)
-npx agent-suggestion-box list              # the open suggestions, the most voted first
-npx agent-suggestion-box ui                # a live page of the box in your browser (127.0.0.1:4848)
-npx agent-suggestion-box triage            # walks them one by one: [f]ile, [d]rop, [s]kip
-npx agent-suggestion-box file <id> <ref>   # resolves it as filed, recording where it went (an issue URL, a ticket…)
-npx agent-suggestion-box drop <id> [why]   # resolves it without filing
+suggestion-box init              # writes .suggestion-box.json and prints the MCP config to add to your agent
+suggestion-box serve             # the MCP server over stdio (what your agent starts)
+suggestion-box list [--json]     # the open suggestions, the most voted first
+suggestion-box ui                # a live page of the box in your browser (127.0.0.1:4848)
+suggestion-box triage            # walks them one by one: [f]ile, [d]rop, [s]kip, [q]uit
+suggestion-box file <id> <ref>   # resolves it as filed, recording where it went (an issue URL, a ticket, a commit)
+suggestion-box drop <id> [why]   # resolves it without filing
 ```
+
+Every command takes `--root <dir>` to name the project instead of finding it from the current directory.
 
 ## The UI
 
@@ -114,7 +128,7 @@ agent-suggestion-box/
 │   ├── store/
 │   │   ├── store.ts              # the port: list, post, upvote, resolve
 │   │   ├── contract.ts           # one suite every store passes (called from each store's tests)
-│   │   ├── file-store.ts         # JSONL in the repository
+│   │   ├── file-store.ts         # an append-only JSONL log of events
 │   │   ├── open.ts               # the store the config names
 │   │   └── ulid.ts               # suggestion ids
 │   ├── mcp/
@@ -125,15 +139,17 @@ agent-suggestion-box/
 │   ├── ui/
 │   │   ├── server.ts             # the read-only page and /api/suggestions, on 127.0.0.1
 │   │   └── page.ts               # the page: markup, styles and script inline
-│   ├── config.ts                 # finds the project and reads .suggestion-box.json
-│   └── format.ts                 # how a suggestion reads in a terminal and to an agent
+│   ├── config.ts                 # finds the project, reads .suggestion-box.json and places the box
+│   ├── format.ts                 # how a suggestion reads in a terminal and to an agent
+│   └── version.ts                # the package's version, read from package.json
 ├── docs/
 │   ├── design.md                 # the model, the port, the store, the MCP server
 │   └── adr/                      # one page per lasting decision, Nygard's format
 ├── examples/
 │   └── claude-code.md            # the MCP config and a line for CLAUDE.md or a skill
+├── CONTRIBUTING.md               # the setup, how changes are made, how to add a store
 ├── package.json
-├── tsconfig.json
+├── tsconfig.json                 # tsconfig.build.json leaves the tests out of dist/
 └── README.md
 ```
 
@@ -156,6 +172,8 @@ npm run dev -- list # run the CLI from source
 npm link            # put this checkout's suggestion-box on your PATH, as a global install would
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how changes are made and how to add a store.
+
 ## Licence
 
-MIT.
+[MIT](LICENSE).
