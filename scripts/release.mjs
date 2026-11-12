@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Bumps the version, publishes to npm and pushes the release commit and its tag,
-// so the npm registry and the git tags never drift apart.
+// Bumps the version, publishes to npm, pushes the release commit and its tag and
+// creates the GitHub release, so npm, the git tags and GitHub never drift apart.
 //
 //   npm run release -- patch|minor|major|<x.y.z>
 //
@@ -21,7 +21,7 @@ const out = (cmd, args) => {
 const run = (cmd, args) =>
   spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32' }).status === 0;
 
-// Preconditions: clean tree, on main, level with origin, logged in to npm.
+// Preconditions: clean tree, on main, level with origin, logged in to npm and gh.
 if (out('git', ['status', '--porcelain'])) fail('the working tree is not clean');
 const branch = out('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
 if (branch !== 'main') fail(`releases are cut from main, not ${branch}`);
@@ -30,6 +30,7 @@ if (out('git', ['rev-parse', 'HEAD']) !== out('git', ['rev-parse', 'origin/main'
   fail('main is not level with origin/main; pull or push first');
 }
 out('npm', ['whoami']);
+out('gh', ['auth', 'status']);
 
 // Check before bumping, so a red build never leaves a version commit behind.
 if (!run('npm', ['run', 'typecheck']) || !run('npm', ['test']) || !run('npm', ['run', 'build'])) {
@@ -52,7 +53,12 @@ if (!run('git', ['push', '--atomic', 'origin', 'main', tag])) {
   fail(`${version} is on npm, but the push failed. Run: git push --atomic origin main ${tag}`);
 }
 
-console.log(`\nReleased ${version}: published to npm and pushed ${tag}.`);
+const ghRelease = ['release', 'create', tag, '--verify-tag', '--title', tag, '--generate-notes'];
+if (!run('gh', ghRelease)) {
+  fail(`${version} is on npm and ${tag} is pushed, but the GitHub release failed. Run: gh ${ghRelease.join(' ')}`);
+}
+
+console.log(`\nReleased ${version}: published to npm, pushed ${tag} and created the GitHub release.`);
 
 function fail(message) {
   console.error(`release: ${message}`);
