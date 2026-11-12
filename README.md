@@ -7,6 +7,7 @@
 > expect changes before 1.0. The settled decisions are in `docs/adr/`.
 
 A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.
+The short tour is at [kaiosilveira.github.io/agent-suggestion-box](https://kaiosilveira.github.io/agent-suggestion-box/).
 
 Agents run into the same friction run after run: a script that fails on the first try, a skill that leaves them guessing, a
 check that flakes, a helper that is missing. Memory lets an agent route around a broken tool; a suggestion box gets the tool
@@ -142,6 +143,8 @@ agent-suggestion-box/
 │   └── adr/                      # one page per lasting decision, Nygard's format
 ├── examples/
 │   └── claude-code.md            # the MCP config and a line for CLAUDE.md or a skill
+├── site/
+│   └── index.html                # the project's page, deployed to GitHub Pages by .github/workflows/pages.yml
 ├── CONTRIBUTING.md               # the setup, how changes are made, how to add a store
 ├── package.json
 ├── tsconfig.json                 # tsconfig.build.json leaves the tests out of dist/

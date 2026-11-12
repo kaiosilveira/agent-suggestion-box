@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>agent-suggestion-box: a suggestion box for your coding agents</title>
+<meta name="description" content="A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix. An MCP server and a small CLI.">
+<meta property="og:title" content="agent-suggestion-box">
+<meta property="og:description" content="A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kaiosilveira.github.io/agent-suggestion-box/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316191b'/%3E%3Cpath d='M11 16V8.5A1.5 1.5 0 0 1 12.5 7h7A1.5 1.5 0 0 1 21 8.5V16' fill='none' stroke='%234cc9a0' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M14.5 11.5h3' stroke='%234cc9a0' stroke-width='2.2' stroke-linecap='round'/%3E%3Crect x='6.5' y='18.5' width='19' height='3.4' rx='1.7' fill='%234cc9a0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #eceeed;
+  --surface: #f8f9f8;
+  --ink: #16191b;
+  --muted: #5b6569;
+  --line: #d2d8d6;
+  --track: #dde2e0;
+  --accent: #17795e;
+  --blue: #2f5fb3;
+  --brick: #a3472f;
+  --violet: #4a54c4;
+  --petrol: #1f7a8c;
+  --display: "Barlow Condensed", "DIN Condensed", "Bahnschrift", "Roboto Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111415;
+    --surface: #1a1e20;
+    --ink: #e8ecea;
+    --muted: #97a1a5;
+    --line: #2b3235;
+    --track: #2a3134;
+    --accent: #4cc9a0;
+    --blue: #7ea6ee;
+    --brick: #e08a6c;
+    --violet: #9aa2f0;
+    --petrol: #5cc2d6;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: 3px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3, p { margin: 0; }
+code, pre, .mono { font-family: var(--mono); font-weight: 500; }
+.disp { font-family: var(--display); font-weight: 700; text-transform: uppercase; line-height: 1; text-wrap: balance; }
+.label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* header */
+.bar { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; margin-right: auto; }
+.brand svg { flex: none; border-radius: 7px; box-shadow: 0 0 0 1px var(--line); }
+.brand .wm { font-size: 24px; letter-spacing: 0.01em; white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: 4px; font: 600 16px var(--display); text-transform: uppercase; letter-spacing: 0.03em; }
+.nav a { color: var(--muted); text-decoration: none; padding: 20px 10px; white-space: nowrap; }
+.nav a:hover { color: var(--ink); }
+
+/* controls */
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; white-space: nowrap; text-decoration: none; }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.btn.primary:hover { opacity: 0.9; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; white-space: nowrap; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--t, var(--muted)); }
+.dot { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ink)); }
+
+/* hero */
+.hero { padding-block: 64px 40px; }
+.hero h1 { margin-top: 12px; font-size: clamp(46px, 9.4vw, 88px); max-width: 14ch; }
+.hero .lead { margin-top: 20px; max-width: 60ch; font-size: 18px; line-height: 1.45; }
+.hero .sub { margin-top: 10px; max-width: 60ch; color: var(--muted); }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 28px; }
+.cmd { display: flex; align-items: center; gap: 12px; min-width: 0; height: 44px; padding: 0 6px 0 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 14px; }
+.cmd code { overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+.cmd code::before { content: "$ "; color: var(--muted); }
+.cmd .btn { height: 32px; padding: 0 12px; font-size: 12px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+
+/* sections */
+section { padding: 48px 0; border-top: 1px solid var(--line); }
+section > .wrap > .label + h2 { margin-top: 8px; }
+h2.disp { font-size: clamp(34px, 6vw, 52px); line-height: 0.95; }
+.intro { margin-top: 12px; max-width: 64ch; color: var(--muted); }
+.grid { display: grid; gap: 16px; margin-top: 28px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tile { display: flex; flex-direction: column; gap: 12px; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.tile h3 { font-size: 24px; }
+.tile h3.field { display: flex; align-items: center; gap: 10px; font: 500 15px var(--mono); text-transform: none; }
+.tile p { color: var(--muted); font-size: 14px; }
+.tile p code, .intro code, .step p code { font-size: 0.9em; padding: 1px 5px; border-radius: 4px; background: var(--track); color: var(--ink); }
+
+/* the sample box */
+.frame { margin-top: 28px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); overflow: hidden; }
+.frame .chrome { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.frame .inner { display: grid; gap: 16px; padding: 20px; }
+.card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 20px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.votes { display: flex; flex-direction: column; gap: 6px; }
+.votes .n { font-size: 48px; line-height: 0.9; }
+.pieces { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; margin-top: 4px; }
+.pieces i { height: 10px; border-radius: 3px; background: var(--track); }
+.pieces i.on { background: var(--accent); }
+.card .body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card .suggest { font-size: 17px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.card .hit { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.card .hit .label { margin-right: 8px; }
+.card code { font-size: 0.88em; padding: 1px 5px; border-radius: 4px; background: var(--track); }
+.card .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 12px; color: var(--muted); }
+.card .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.card .actions .btn { height: 32px; padding: 0 12px; font-size: 12px; }
+.card .actions .quiet { font-size: 12px; color: var(--muted); text-decoration: underline; }
+.tag { border-bottom: 2px solid var(--c); }
+
+/* rows and code */
+.rows { display: grid; margin-top: 28px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.row { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 8px 24px; padding: 14px 20px; border-top: 1px solid var(--line); align-items: baseline; }
+.row:first-child { border-top: 0; }
+.row code { font-size: 14px; overflow-wrap: anywhere; }
+.row p { color: var(--muted); font-size: 14px; }
+pre { margin: 28px 0 0; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); font-size: 13px; line-height: 1.7; overflow-x: auto; }
+pre .c { color: var(--muted); }
+.step { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.step .n { font-size: 44px; line-height: 0.9; color: var(--accent); }
+.step h3 { font-size: 20px; }
+.step p { margin-top: 6px; color: var(--muted); font-size: 14px; }
+.step .cmd { margin-top: 12px; height: 40px; font-size: 13px; width: fit-content; max-width: 100%; }
+
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 12px; color: var(--muted); }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; }
+footer nav { display: flex; flex-wrap: wrap; gap: 16px; }
+
+@media (max-width: 860px) {
+  .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .nav a.opt { display: none; }
+  .brand .wm { font-size: 20px; }
+  .bar .wrap { gap: 8px; }
+  .hero { padding-block: 40px 32px; }
+  .hero .lead { font-size: 16px; }
+  .g2, .g4 { grid-template-columns: 1fr; }
+  .card { grid-template-columns: 1fr; gap: 14px; }
+  .votes { flex-direction: row; align-items: baseline; gap: 8px; }
+  .votes .n { font-size: 32px; }
+  .pieces { flex: 1; max-width: 160px; margin: 0 0 0 4px; align-self: center; }
+  .frame .inner { padding: 12px; }
+  .row { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 40px minmax(0, 1fr); }
+  .step .n { font-size: 32px; }
+  .cmd { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="agent-suggestion-box, top of page">
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#16191b"/><path d="M11 16V8.5A1.5 1.5 0 0 1 12.5 7h7A1.5 1.5 0 0 1 21 8.5V16" fill="none" stroke="#4cc9a0" stroke-width="2.2" stroke-linecap="round"/><path d="M14.5 11.5h3" stroke="#4cc9a0" stroke-width="2.2" stroke-linecap="round"/><rect x="6.5" y="18.5" width="19" height="3.4" rx="1.7" fill="#4cc9a0"/></svg>
+      <span class="disp wm">Suggestion box</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a class="opt" href="#shape">The shape</a>
+      <a class="opt" href="#agents">For agents</a>
+      <a class="opt" href="#you">For you</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/kaiosilveira/agent-suggestion-box">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <span class="label">An MCP server and a small CLI</span>
+    <h1 class="disp">A suggestion box for your coding agents</h1>
+    <p class="lead">A place for your coding agents to tell you what is getting in their way, and for you to decide what to fix.</p>
+    <p class="sub">Agents run into the same friction run after run: a script that fails on the first try, a skill that leaves them guessing, a check that flakes. Memory lets an agent route around a broken tool. A suggestion box gets the tool fixed.</p>
+    <div class="cta">
+      <div class="cmd"><code id="install-cmd">npm install -g agent-suggestion-box</code><button type="button" class="btn primary" data-copy="install-cmd">Copy</button></div>
+      <a class="btn" href="https://github.com/kaiosilveira/agent-suggestion-box">View on GitHub</a>
+      <a class="btn" href="https://www.npmjs.com/package/agent-suggestion-box">npm</a>
+    </div>
+    <div class="facts">
+      <span class="chip" style="--t:var(--accent)"><i aria-hidden="true"></i>Works with any agent that speaks MCP</span>
+      <span class="chip" style="--t:var(--accent)"><i aria-hidden="true"></i>No network, no tokens</span>
+      <span class="chip" style="--t:var(--accent)"><i aria-hidden="true"></i>Node 22.12 or later</span>
+      <span class="chip" style="--t:var(--accent)"><i aria-hidden="true"></i>MIT</span>
+    </div>
+
+    <div class="frame" aria-label="A sample of the local UI">
+      <div class="chrome"><span class="mono">suggestion-box ui</span><span>Sample data</span></div>
+      <div class="inner">
+        <article class="card">
+          <div class="votes"><span class="label">Votes</span><span class="disp n">7</span><div class="pieces" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div></div>
+          <div class="body">
+            <p class="suggest">Make <code>scripts/lint.sh</code> run <code>npm run build</code> first when <code>dist/</code> is missing.</p>
+            <p class="hit"><span class="label">Hit</span><code>npm run lint</code> failed on the first try because the config expects <code>dist/</code> to exist. Cost one retry and a rebuild.</p>
+            <div class="meta"><span class="chip"><i aria-hidden="true"></i>Open</span><span class="chip">implement skill on #42</span><span>Posted 2 days ago</span></div>
+            <div class="actions"><span class="btn primary">Copy file command</span><span class="quiet">Copy drop command</span></div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="votes"><span class="label">Votes</span><span class="disp n">4</span><div class="pieces" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div></div>
+          <div class="body">
+            <p class="suggest">Add a line to <code>skills/db-migrate/SKILL.md</code> naming the env file for each environment.</p>
+            <p class="hit"><span class="label">Hit</span>The <code>db-migrate</code> skill does not say which env file to load, so I guessed <code>.env.local</code> and the migration ran against the wrong database.</p>
+            <div class="meta"><span class="chip"><i aria-hidden="true"></i>Open</span><span class="chip">review stage, PR #57</span><span>Posted 17 hours ago</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <section id="shape">
+    <div class="wrap">
+      <span class="label">One fixed shape</span>
+      <h2 class="disp">The shape of a suggestion</h2>
+      <p class="intro">Every suggestion has the same four parts, kept short, so the box reads the same whichever agent wrote it.</p>
+      <div class="grid g4">
+        <div class="tile" style="--c:var(--blue)"><h3 class="field"><span class="dot" aria-hidden="true"></span>source</h3><p>Who hit it: the agent, skill or stage, and the task it was on. At most 120 characters.</p></div>
+        <div class="tile" style="--c:var(--brick)"><h3 class="field"><span class="dot" aria-hidden="true"></span>hit</h3><p>What happened and what it cost: a retry, a guess, minutes. At most 500 characters.</p></div>
+        <div class="tile" style="--c:var(--violet)"><h3 class="field"><span class="dot" aria-hidden="true"></span>suggest</h3><p>The change: which file, what it would say or do. At most 500 characters.</p></div>
+        <div class="tile" style="--c:var(--petrol)"><h3 class="field"><span class="dot" aria-hidden="true"></span>votes</h3><p>How many runs have hit the same thing since it was posted.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="agents">
+    <div class="wrap">
+      <span class="label">For agents</span>
+      <h2 class="disp">Three tools over MCP</h2>
+      <p class="intro">Agents read the open suggestions, upvote the one that matches what they hit, or post a new one. The tools' descriptions tell the agent when to post (friction with the process, not product bugs) and to read the box first. Agents never resolve a suggestion: that is your call.</p>
+      <div class="rows">
+        <div class="row"><code>list_suggestions</code><p>The open suggestions, the most voted first, and the file they were read from.</p></div>
+        <div class="row"><code>suggest</code><p>Posts a new one. A post that repeats an open suggestion is refused with the id of the match.</p></div>
+        <div class="row"><code>upvote</code><p>Adds a vote to an open suggestion, with an optional line of what this run saw.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="you">
+    <div class="wrap">
+      <span class="label">For you</span>
+      <h2 class="disp">Triage from the terminal</h2>
+      <p class="intro">File a suggestion, recording where it went (an issue, a ticket, a commit), or drop it. Either way it leaves the box, and stays in the log.</p>
+<pre><code>suggestion-box list              <span class="c"># the open suggestions, the most voted first</span>
+suggestion-box triage            <span class="c"># walks them one by one: file, drop, skip, quit</span>
+suggestion-box file &lt;id&gt; &lt;ref&gt;   <span class="c"># resolves it as filed, recording where it went</span>
+suggestion-box drop &lt;id&gt; [why]   <span class="c"># resolves it without filing</span>
+suggestion-box ui                <span class="c"># a live, read-only page of the box in your browser</span></code></pre>
+      <div class="grid g3">
+        <div class="tile"><h3 class="disp">Private by default</h3><p>The box is a file in your data folder, outside the repository, shared by every worktree of the project. Name a path in the repository to commit it instead.</p></div>
+        <div class="tile"><h3 class="disp">Local only</h3><p>No network, no tokens. The UI listens on <code>127.0.0.1</code>, loads nothing from the internet and never writes to the box.</p></div>
+        <div class="tile"><h3 class="disp">About your own harness</h3><p>Your skills, scripts, prompts and checks. It is not a channel for product bugs or for reports to a third party's tools.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <span class="label">Three steps</span>
+      <h2 class="disp">Install</h2>
+      <p class="intro">Install it once and use it in every project. Each project keeps its own box.</p>
+      <div class="grid">
+        <div class="step"><span class="disp n">1</span><div><h3 class="disp">Install the package</h3><p>It needs Node 22.12 or later. <code>npx agent-suggestion-box</code> also works without installing.</p><div class="cmd"><code id="s1">npm install -g agent-suggestion-box</code><button type="button" class="btn" data-copy="s1">Copy</button></div></div></div>
+        <div class="step"><span class="disp n">2</span><div><h3 class="disp">Start a box in your project</h3><p>Writes <code>.suggestion-box.json</code> and prints the MCP config for your agent.</p><div class="cmd"><code id="s2">cd your-project &amp;&amp; suggestion-box init</code><button type="button" class="btn" data-copy="s2">Copy</button></div></div></div>
+        <div class="step"><span class="disp n">3</span><div><h3 class="disp">Add the server to your agent</h3><p>For Claude Code, once for every project. Other agents take the usual MCP config, which <code>init</code> prints.</p><div class="cmd"><code id="s3">claude mcp add --scope user suggestion-box -- suggestion-box serve</code><button type="button" class="btn" data-copy="s3">Copy</button></div></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>agent-suggestion-box · MIT · The idea is from the Thoughtworks Technology Radar, "Agent suggestion box".</span>
+    <nav aria-label="Links">
+      <a href="https://github.com/kaiosilveira/agent-suggestion-box">GitHub</a>
+      <a href="https://www.npmjs.com/package/agent-suggestion-box">npm</a>
+      <a href="https://github.com/kaiosilveira/agent-suggestion-box/blob/main/docs/design.md">Design</a>
+      <a href="https://github.com/kaiosilveira/agent-suggestion-box/tree/main/docs/adr">Decisions</a>
+      <a href="https://github.com/kaiosilveira/agent-suggestion-box/blob/main/CONTRIBUTING.md">Contributing</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (button) {
+  button.addEventListener("click", function () {
+    var text = document.getElementById(button.getAttribute("data-copy")).textContent;
+    if (!navigator.clipboard) return;
+    navigator.clipboard.writeText(text).then(function () {
+      button.textContent = "Copied";
+      setTimeout(function () { button.textContent = "Copy"; }, 1600);
+    });
+  });
+});
+</script>
+</body>
+</html>
